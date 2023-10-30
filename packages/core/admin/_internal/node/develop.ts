@@ -7,7 +7,6 @@ import cluster from 'node:cluster';
 import { getTimer } from './core/timer';
 import { checkRequiredDependencies } from './core/dependencies';
 import { createBuildContext } from './createBuildContext';
-import { watch as watchWebpack } from './webpack/watch';
 
 import EE from '@strapi/strapi/dist/utils/ee';
 import { writeStaticClientFiles } from './staticFiles';
@@ -85,7 +84,14 @@ const develop = async ({ cwd, polling, logger, tsconfig, ...options }: DevelopOp
 
     EE.init(cwd);
     await writeStaticClientFiles(ctx);
-    await watchWebpack(ctx);
+
+    if (ctx.bundler === 'webpack') {
+      const { watch: watchWebpack } = await import('./webpack/watch');
+      await watchWebpack(ctx);
+    } else if (ctx.bundler === 'vite') {
+      const { watch: watchVite } = await import('./vite/watch');
+      await watchVite(ctx);
+    }
 
     const adminDuration = timer.end('creatingAdmin');
     adminSpinner.text = `Creating admin (${adminDuration}ms)`;
